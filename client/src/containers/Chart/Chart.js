@@ -13,6 +13,8 @@ import {
 import moment from "moment";
 import "chart.piecelabel.js";
 
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 import LineChart from "./components/LineChart";
 import {
   removeChart, runQuery, updateChart, changeOrder
@@ -20,8 +22,6 @@ import {
 import canAccess from "../../config/canAccess";
 import { SITE_HOST } from "../../config/settings";
 import BarChart from "./components/BarChart";
-import jsPDF from "jspdf";
-import html2canvas from 'html2canvas';
 
 /*
   This is the container that generates the Charts together with the menu
@@ -185,16 +185,16 @@ function Chart(props) {
   };
 
   const _exportPDF = (chart) => {
-    const input = document.getElementById('export_as_pdf');
+    const input = document.getElementById("export_as_pdf");
     html2canvas(input)
       .then((canvas) => {
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('landscape');
-        pdf.text(20, 20, `Chart Name: ${chart.name}`)
-        pdf.addImage(imgData, 'JPEG', 15, 40)
+        const imgData = canvas.toDataURL("image/png");
+        const pdf = new jsPDF("landscape");
+        pdf.text(20, 20, `Chart Name: ${chart.name}`);
+        pdf.addImage(imgData, "JPEG", 15, 40);
         pdf.save("chart.pdf");
-      })
-  }
+      });
+  };
 
   const _openUpdateModal = (chart) => {
     setUpdateModal(true);
@@ -342,7 +342,7 @@ function Chart(props) {
                                 <Icon name="caret left" />
                                 {" "}
                                 Size
-                                </p>
+                              </p>
                             )}
                           >
                             <Dropdown.Menu>
@@ -376,7 +376,7 @@ function Chart(props) {
                                 <Icon name="caret left" />
                                 {" "}
                                 Order
-                                </p>
+                              </p>
                             )}
                           >
                             <Dropdown.Menu>
@@ -680,7 +680,7 @@ function Chart(props) {
                 onClick={() => setEmbedModal(false)}
               >
                 Done
-          </Button>
+              </Button>
             )}
             {!selectedChart.public && (
               <Button
@@ -689,7 +689,7 @@ function Chart(props) {
                 onClick={() => setEmbedModal(false)}
               >
                 Cancel
-          </Button>
+              </Button>
             )}
             {!selectedChart.public && (
               <Button
@@ -701,7 +701,7 @@ function Chart(props) {
                 }}
               >
                 Make public
-          </Button>
+              </Button>
             )}
           </Modal.Actions>
         </Modal>
