@@ -20,6 +20,8 @@ import {
 import canAccess from "../../config/canAccess";
 import { SITE_HOST } from "../../config/settings";
 import BarChart from "./components/BarChart";
+import jsPDF from "jspdf";
+import html2canvas from 'html2canvas';
 
 /*
   This is the container that generates the Charts together with the menu
@@ -182,6 +184,18 @@ function Chart(props) {
     setEmbedModal(true);
   };
 
+  const _exportPDF = (chart) => {
+    const input = document.getElementById('export_as_pdf');
+    html2canvas(input)
+      .then((canvas) => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('landscape');
+        pdf.text(20, 20, `Chart Name: ${chart.name}`)
+        pdf.addImage(imgData, 'JPEG', 15, 40)
+        pdf.save("chart.pdf");
+      })
+  }
+
   const _openUpdateModal = (chart) => {
     setUpdateModal(true);
     setSelectedChart(chart);
@@ -221,20 +235,19 @@ function Chart(props) {
   const _deactivateMenu = () => setMenuVisible(false);
 
   const { projectId } = match.params;
-
   return (
     <div style={styles.container}>
       {error
-          && (
+        && (
           <Message
             negative
             onDismiss={() => setError(false)}
             header="There was a problem with your request"
             content="This is on us, we couldn't process your request. Try to refresh the page and try again."
           />
-          )}
+        )}
       {charts.length < 1
-          && (
+        && (
           <Grid centered style={styles.addCard}>
             <Card
               raised
@@ -248,14 +261,14 @@ function Chart(props) {
               </Header>
             </Card>
           </Grid>
-          )}
+        )}
 
       <Grid stackable centered style={styles.mainGrid}>
         {connections && charts.map((chart, index) => {
           if (isPublic && !chart.public) return (<span style={{ display: "none" }} key={chart.id} />);
           if (isPublic && chart.draft) return (<span style={{ display: "none" }} key={chart.id} />);
           if (chart.draft && !showDrafts) return (<span style={{ display: "none" }} key={chart.id} />);
-            if (!chart.id) return (<span style={{ display: "none" }} key={`no_id_${index}`} />); // eslint-disable-line
+          if (!chart.id) return (<span style={{ display: "none" }} key={`no_id_${index}`} />); // eslint-disable-line
 
           // get connection
           let connection;
@@ -274,162 +287,167 @@ function Chart(props) {
               >
                 <div style={styles.titleArea(_isKpi(chart))}>
                   {_canAccess("editor") && projectId
-                      && (
-                        <Dropdown
-                          icon={menuVisible === chart.id ? "ellipsis horizontal" : ""}
-                          direction="left"
-                          button
-                          basic
-                          className="circular icon"
-                          style={styles.menuBtn(menuVisible === chart.id)}
-                        >
-                          <Dropdown.Menu>
-                            <Dropdown.Item
-                              icon="refresh"
-                              text="Refresh data"
-                              onClick={() => _onGetChartData(chart.id)}
-                            />
-                            <Dropdown.Item
-                              icon="clock"
-                              text="Auto-update"
-                              onClick={() => _openUpdateModal(chart)}
-                            />
-                            <Dropdown.Item
-                              icon="pencil"
-                              text="Edit"
-                              as={Link}
-                              to={`/${match.params.teamId}/${match.params.projectId}/chart/${chart.id}/edit`}
-                            />
-                            {!chart.draft && (
-                              <>
-                                <Dropdown.Item
-                                  onClick={() => _onPublicConfirmation(chart)}
-                                >
-                                  <Icon name="world" color={chart.public ? "red" : "green"} />
-                                  {chart.public ? "Make private" : "Make public"}
-                                </Dropdown.Item>
-                                <Dropdown.Item
-                                  icon="code"
-                                  text="Embed"
-                                  onClick={() => _onEmbed(chart)}
-                                />
-                              </>
+                    && (
+                      <Dropdown
+                        icon={menuVisible === chart.id ? "ellipsis horizontal" : ""}
+                        direction="left"
+                        button
+                        basic
+                        className="circular icon"
+                        style={styles.menuBtn(menuVisible === chart.id)}
+                      >
+                        <Dropdown.Menu>
+                          <Dropdown.Item
+                            icon="refresh"
+                            text="Refresh data"
+                            onClick={() => _onGetChartData(chart.id)}
+                          />
+                          <Dropdown.Item
+                            icon="clock"
+                            text="Auto-update"
+                            onClick={() => _openUpdateModal(chart)}
+                          />
+                          <Dropdown.Item
+                            icon="pencil"
+                            text="Edit"
+                            as={Link}
+                            to={`/${match.params.teamId}/${match.params.projectId}/chart/${chart.id}/edit`}
+                          />
+                          {!chart.draft && (
+                            <>
+                              <Dropdown.Item
+                                onClick={() => _onPublicConfirmation(chart)}
+                              >
+                                <Icon name="world" color={chart.public ? "red" : "green"} />
+                                {chart.public ? "Make private" : "Make public"}
+                              </Dropdown.Item>
+                              <Dropdown.Item
+                                icon="code"
+                                text="Embed"
+                                onClick={() => _onEmbed(chart)}
+                              />
+                            </>
+                          )}
+                          <Dropdown.Item
+                            icon="download"
+                            text="Export as PDF"
+                            onClick={() => _exportPDF(chart)}
+                          />
+                          <Dropdown.Divider />
+                          <Dropdown
+                            item
+                            icon={false}
+                            trigger={(
+                              <p style={{ marginBottom: 0 }}>
+                                <Icon name="caret left" />
+                                {" "}
+                                Size
+                                </p>
                             )}
-                            <Dropdown.Divider />
-                            <Dropdown
-                              item
-                              icon={false}
-                              trigger={(
-                                <p style={{ marginBottom: 0 }}>
-                                  <Icon name="caret left" />
-                                  {" "}
-                                  Size
+                          >
+                            <Dropdown.Menu>
+                              <Dropdown.Item
+                                text="Small"
+                                icon={chart.chartSize === 1 ? "checkmark" : false}
+                                onClick={() => _onChangeSize(chart.id, 1)}
+                              />
+                              <Dropdown.Item
+                                text="Medium"
+                                icon={chart.chartSize === 2 ? "checkmark" : false}
+                                onClick={() => _onChangeSize(chart.id, 2)}
+                              />
+                              <Dropdown.Item
+                                text="Large"
+                                icon={chart.chartSize === 3 ? "checkmark" : false}
+                                onClick={() => _onChangeSize(chart.id, 3)}
+                              />
+                              <Dropdown.Item
+                                text="Full width"
+                                icon={chart.chartSize === 4 ? "checkmark" : false}
+                                onClick={() => _onChangeSize(chart.id, 4)}
+                              />
+                            </Dropdown.Menu>
+                          </Dropdown>
+                          <Dropdown
+                            item
+                            icon={false}
+                            trigger={(
+                              <p style={{ marginBottom: 0 }}>
+                                <Icon name="caret left" />
+                                {" "}
+                                Order
                                 </p>
-                              )}
-                            >
-                              <Dropdown.Menu>
-                                <Dropdown.Item
-                                  text="Small"
-                                  icon={chart.chartSize === 1 ? "checkmark" : false}
-                                  onClick={() => _onChangeSize(chart.id, 1)}
-                                />
-                                <Dropdown.Item
-                                  text="Medium"
-                                  icon={chart.chartSize === 2 ? "checkmark" : false}
-                                  onClick={() => _onChangeSize(chart.id, 2)}
-                                />
-                                <Dropdown.Item
-                                  text="Large"
-                                  icon={chart.chartSize === 3 ? "checkmark" : false}
-                                  onClick={() => _onChangeSize(chart.id, 3)}
-                                />
-                                <Dropdown.Item
-                                  text="Full width"
-                                  icon={chart.chartSize === 4 ? "checkmark" : false}
-                                  onClick={() => _onChangeSize(chart.id, 4)}
-                                />
-                              </Dropdown.Menu>
-                            </Dropdown>
-                            <Dropdown
-                              item
-                              icon={false}
-                              trigger={(
-                                <p style={{ marginBottom: 0 }}>
-                                  <Icon name="caret left" />
-                                  {" "}
-                                  Order
-                                </p>
-                              )}
-                            >
-                              <Dropdown.Menu>
-                                <Dropdown.Item
-                                  text="Move to top"
-                                  icon="angle double up"
-                                  disabled={index === 0}
-                                  onClick={() => _onChangeOrder(chart.id, "top")}
-                                />
-                                <Dropdown.Item
-                                  text="Move up"
-                                  icon="chevron up"
-                                  disabled={index === 0}
-                                  onClick={() => _onChangeOrder(chart.id, charts[index - 1].id)}
-                                />
-                                <Dropdown.Item
-                                  text="Move down"
-                                  icon="chevron down"
-                                  disabled={index === charts.length - 1}
-                                  onClick={() => _onChangeOrder(chart.id, charts[index + 1].id)}
-                                />
-                                <Dropdown.Item
-                                  text="Move to bottom"
-                                  icon="angle double down"
-                                  disabled={index === charts.length - 1}
-                                  onClick={() => {
-                                    _onChangeOrder(chart.id, "bottom");
-                                  }}
-                                />
-                              </Dropdown.Menu>
-                            </Dropdown>
-                            <Dropdown.Divider />
-                            <Dropdown.Item
-                              icon="trash"
-                              text="Delete"
-                              onClick={() => _onDeleteChartConfirmation(chart.id)}
-                            />
-                          </Dropdown.Menu>
-                        </Dropdown>
-                      )}
+                            )}
+                          >
+                            <Dropdown.Menu>
+                              <Dropdown.Item
+                                text="Move to top"
+                                icon="angle double up"
+                                disabled={index === 0}
+                                onClick={() => _onChangeOrder(chart.id, "top")}
+                              />
+                              <Dropdown.Item
+                                text="Move up"
+                                icon="chevron up"
+                                disabled={index === 0}
+                                onClick={() => _onChangeOrder(chart.id, charts[index - 1].id)}
+                              />
+                              <Dropdown.Item
+                                text="Move down"
+                                icon="chevron down"
+                                disabled={index === charts.length - 1}
+                                onClick={() => _onChangeOrder(chart.id, charts[index + 1].id)}
+                              />
+                              <Dropdown.Item
+                                text="Move to bottom"
+                                icon="angle double down"
+                                disabled={index === charts.length - 1}
+                                onClick={() => {
+                                  _onChangeOrder(chart.id, "bottom");
+                                }}
+                              />
+                            </Dropdown.Menu>
+                          </Dropdown>
+                          <Dropdown.Divider />
+                          <Dropdown.Item
+                            icon="trash"
+                            text="Delete"
+                            onClick={() => _onDeleteChartConfirmation(chart.id)}
+                          />
+                        </Dropdown.Menu>
+                      </Dropdown>
+                    )}
                   <Header style={{ display: "contents" }}>
                     {chart.draft && (
                       <Label color="olive" style={styles.draft}>Draft</Label>
                     )}
                     <span>
                       {chart.public && !isPublic
-                          && (
-                            <Popup
-                              trigger={<Icon name="world" />}
-                              content="This chart is public"
-                              position="bottom center"
-                            />
-                          )}
+                        && (
+                          <Popup
+                            trigger={<Icon name="world" />}
+                            content="This chart is public"
+                            position="bottom center"
+                          />
+                        )}
                       {chart.name}
                     </span>
                     {connection && _canAccess("editor") && projectId
-                        && (
-                          <Popup
-                            trigger={(
-                              <Header.Subheader>
-                                {connection.name}
-                                <Icon
-                                  name={connection.active ? "plug" : "pause"}
-                                  color={connection.active ? "green" : "orange"}
-                                />
-                              </Header.Subheader>
-                            )}
-                            content={connection.active ? "Connection active" : "Connection not active"}
-                            position="bottom left"
-                          />
-                        )}
+                      && (
+                        <Popup
+                          trigger={(
+                            <Header.Subheader>
+                              {connection.name}
+                              <Icon
+                                name={connection.active ? "plug" : "pause"}
+                                color={connection.active ? "green" : "orange"}
+                              />
+                            </Header.Subheader>
+                          )}
+                          content={connection.active ? "Connection active" : "Connection not active"}
+                          position="bottom left"
+                        />
+                      )}
                   </Header>
                   {chart.chartData && (
                     <div>
@@ -442,7 +460,7 @@ function Chart(props) {
                     <Dimmer inverted active={chartLoading === chart.id}>
                       <Loader inverted />
                     </Dimmer>
-                    <div style={styles.mainChartArea(_isKpi(chart))}>
+                    <div id="export_as_pdf" style={styles.mainChartArea(_isKpi(chart))}>
                       {chart.type === "line"
                         && (
                           <LineChart chart={chart} />
@@ -453,35 +471,35 @@ function Chart(props) {
                         )}
                       {chart.type === "pie"
                         && (
-                        <Pie
-                          data={chart.chartData.data}
-                          options={chart.chartData.options}
-                          height={300}
-                        />
+                          <Pie
+                            data={chart.chartData.data}
+                            options={chart.chartData.options}
+                            height={300}
+                          />
                         )}
                       {chart.type === "doughnut"
                         && (
-                        <Doughnut
-                          data={chart.chartData.data}
-                          options={chart.chartData.options}
-                          height={300}
-                        />
+                          <Doughnut
+                            data={chart.chartData.data}
+                            options={chart.chartData.options}
+                            height={300}
+                          />
                         )}
                       {chart.type === "radar"
                         && (
-                        <Radar
-                          data={chart.chartData.data}
-                          options={chart.chartData.options}
-                          height={300}
-                        />
+                          <Radar
+                            data={chart.chartData.data}
+                            options={chart.chartData.options}
+                            height={300}
+                          />
                         )}
                       {chart.type === "polar"
                         && (
-                        <Polar
-                          data={chart.chartData.data}
-                          options={chart.chartData.options}
-                          height={300}
-                        />
+                          <Polar
+                            data={chart.chartData.data}
+                            options={chart.chartData.options}
+                            height={300}
+                          />
                         )}
                     </div>
                   </>
@@ -497,7 +515,7 @@ function Chart(props) {
         <Header
           icon="exclamation triangle"
           content="Are you sure you want to remove this chart?"
-          />
+        />
         <Modal.Content>
           <p>
             {"All the chart data will be removed and you won't be able to see it on your dashboard anymore if you proceed with the removal."}
@@ -508,7 +526,7 @@ function Chart(props) {
             basic
             inverted
             onClick={() => setDeleteModal(false)}
-            >
+          >
             Go back
           </Button>
           <Button
@@ -516,7 +534,7 @@ function Chart(props) {
             inverted
             loading={!!chartLoading}
             onClick={_onDeleteChart}
-            >
+          >
             <Icon name="x" />
             Remove completely
           </Button>
@@ -529,11 +547,11 @@ function Chart(props) {
         basic
         size="small"
         onClose={() => setPublicModal(false)}
-        >
+      >
         <Header
           icon="exclamation triangle"
           content="Are you sure you want to make your chart public?"
-          />
+        />
         <Modal.Content>
           <p>
             {"Public charts will show in your Public Dashboard page and it can be viewed by everyone that has access to your domain. Nobody other than you and your team will be able to edit or update the chart data."}
@@ -544,7 +562,7 @@ function Chart(props) {
             basic
             inverted
             onClick={() => setPublicModal(false)}
-            >
+          >
             Go back
           </Button>
           <Button
@@ -552,7 +570,7 @@ function Chart(props) {
             inverted
             loading={publicLoading}
             onClick={_onPublic}
-            >
+          >
             <Icon name="checkmark" />
             Make the chart public
           </Button>
@@ -564,7 +582,7 @@ function Chart(props) {
         open={updateModal}
         size="small"
         onClose={() => setUpdateModal(false)}
-        >
+      >
         <Modal.Header>
           Set up auto-update for your chart
         </Modal.Header>
@@ -608,21 +626,21 @@ function Chart(props) {
                 }]}
                 value={updateFrequency || 0}
                 onChange={(e, data) => setUpdateFrequency(data.value)}
-                />
+              />
             </Form.Field>
           </Form>
         </Modal.Content>
         <Modal.Actions>
           <Button
             onClick={() => setUpdateModal(false)}
-            >
+          >
             Cancel
           </Button>
           <Button
             primary
             loading={autoUpdateLoading}
             onClick={_onChangeAutoUpdate}
-            >
+          >
             <Icon name="checkmark" />
             Save
           </Button>
@@ -631,62 +649,62 @@ function Chart(props) {
 
       {/* EMBED CHART MODAL */}
       {selectedChart && (
-      <Modal
-        open={embedModal}
-        basic
-        size="small"
-        onClose={() => setEmbedModal(false)}
-          >
-        <Header
-          icon="code"
-          content="Embed your chart on other websites"
-            />
-        <Modal.Content>
-          <p>
-            {"Copy the following code on the website you wish to add your chart in."}
-          </p>
-          <p>
-            {"You can customize the iframe in any way you wish, but leave the 'src' attribute the way it is below."}
-          </p>
-          <Form>
-            <TextArea
-              value={`<iframe src="${SITE_HOST}/chart/${selectedChart.id}/embedded" allowTransparency="true" width="700" height="300" scrolling="no" frameborder="0"></iframe>`}
-                />
-          </Form>
-        </Modal.Content>
-        <Modal.Actions>
-          {selectedChart.public && (
-          <Button
-            basic
-            inverted
-            onClick={() => setEmbedModal(false)}
-                >
-            Done
+        <Modal
+          open={embedModal}
+          basic
+          size="small"
+          onClose={() => setEmbedModal(false)}
+        >
+          <Header
+            icon="code"
+            content="Embed your chart on other websites"
+          />
+          <Modal.Content>
+            <p>
+              {"Copy the following code on the website you wish to add your chart in."}
+            </p>
+            <p>
+              {"You can customize the iframe in any way you wish, but leave the 'src' attribute the way it is below."}
+            </p>
+            <Form>
+              <TextArea
+                value={`<iframe src="${SITE_HOST}/chart/${selectedChart.id}/embedded" allowTransparency="true" width="700" height="300" scrolling="no" frameborder="0"></iframe>`}
+              />
+            </Form>
+          </Modal.Content>
+          <Modal.Actions>
+            {selectedChart.public && (
+              <Button
+                basic
+                inverted
+                onClick={() => setEmbedModal(false)}
+              >
+                Done
           </Button>
-          )}
-          {!selectedChart.public && (
-          <Button
-            basic
-            inverted
-            onClick={() => setEmbedModal(false)}
-                >
-            Cancel
+            )}
+            {!selectedChart.public && (
+              <Button
+                basic
+                inverted
+                onClick={() => setEmbedModal(false)}
+              >
+                Cancel
           </Button>
-          )}
-          {!selectedChart.public && (
-          <Button
-            color="teal"
-            inverted
-            onClick={() => {
-              _onPublic();
-              setEmbedModal(false);
-            }}
-                >
-            Make public
+            )}
+            {!selectedChart.public && (
+              <Button
+                color="teal"
+                inverted
+                onClick={() => {
+                  _onPublic();
+                  setEmbedModal(false);
+                }}
+              >
+                Make public
           </Button>
-          )}
-        </Modal.Actions>
-      </Modal>
+            )}
+          </Modal.Actions>
+        </Modal>
       )}
     </div>
   );
@@ -735,7 +753,7 @@ Chart.defaultProps = {
   isPublic: false,
   showDrafts: true,
   refreshRequested: false,
-  onCompleteRefresh: () => {},
+  onCompleteRefresh: () => { },
 };
 
 Chart.propTypes = {
